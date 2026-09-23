@@ -49,6 +49,23 @@ class ScrapedProduct(BaseModel):
     has_aminogram: bool = False
     leucine_per_100g: Optional[float] = None
     protein_score: Optional[float] = None
+    whey_type: Optional[str] = "fromagere"
+    is_grass_fed: bool = False
+    origin_country: Optional[str] = "UE"
+    extraction_process: Optional[str] = "Standard"
+    chemical_free: bool = True
+    certifications: List[str] = Field(default_factory=list)
+    has_coa: bool = False
+    third_party_testing: bool = False
+    manufacturing_score: Optional[float] = None
+    sweeteners: List[str] = Field(default_factory=list)
+    additives_count: int = 0
+    is_clean_label: bool = False
+    health_score: Optional[float] = None
+    packaging_type: Optional[str] = "pot_plastique_standard"
+    has_plastic_scoop: bool = True
+    supply_chain_transparency: Optional[str] = "local_ue"
+    eco_score: Optional[float] = None
 
 
 class BaseScraper(ABC):

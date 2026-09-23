@@ -11,13 +11,15 @@ from sqlalchemy import (
     Column,
     String,
     Boolean,
+    Integer,
     DateTime,
     ForeignKey,
     Numeric,
     UniqueConstraint,
+    JSON,
     text
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 
 try:
@@ -58,6 +60,23 @@ class ProductDB(Base):
     has_aminogram = Column(Boolean, default=False)
     leucine_per_100g = Column(Numeric(5, 2), nullable=True)
     protein_score = Column(Numeric(4, 1), nullable=True, index=True)
+    whey_type = Column(String(50), nullable=True)
+    is_grass_fed = Column(Boolean, default=False)
+    origin_country = Column(String(100), nullable=True)
+    extraction_process = Column(String(100), nullable=True)
+    chemical_free = Column(Boolean, default=True)
+    certifications = Column(JSONB, default=[])
+    has_coa = Column(Boolean, default=False)
+    third_party_testing = Column(Boolean, default=False)
+    manufacturing_score = Column(Numeric(4, 1), nullable=True, index=True)
+    sweeteners = Column(JSONB, default=[])
+    additives_count = Column(Integer, default=0)
+    is_clean_label = Column(Boolean, default=False)
+    health_score = Column(Numeric(4, 1), nullable=True, index=True)
+    packaging_type = Column(String(100), nullable=True)
+    has_plastic_scoop = Column(Boolean, default=False)
+    supply_chain_transparency = Column(String(100), nullable=True)
+    eco_score = Column(Numeric(4, 1), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -98,13 +117,30 @@ def init_db():
     """
     print("[Database] Initializing Supabase schema tables...")
     Base.metadata.create_all(bind=engine)
-    # Ensure compare_at_price and protein score columns exist
+    # Ensure compare_at_price, protein score, manufacturing score, health score & eco score columns exist
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS compare_at_price NUMERIC(10, 2);"))
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS protein_percentage NUMERIC(5, 2);"))
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS has_aminogram BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS leucine_per_100g NUMERIC(5, 2);"))
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS protein_score NUMERIC(4, 1);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS whey_type VARCHAR(50);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_grass_fed BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS origin_country VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS extraction_process VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS chemical_free BOOLEAN DEFAULT TRUE;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS certifications JSONB DEFAULT '[]'::jsonb;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS has_coa BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS third_party_testing BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS manufacturing_score NUMERIC(4, 1);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS sweeteners JSONB DEFAULT '[]'::jsonb;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS additives_count INTEGER DEFAULT 0;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS is_clean_label BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS health_score NUMERIC(4, 1);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS packaging_type VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS has_plastic_scoop BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS supply_chain_transparency VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS eco_score NUMERIC(4, 1);"))
         conn.commit()
     print("[Database] Schema tables initialized successfully.")
 
@@ -148,6 +184,23 @@ def save_scraped_products(session: Session, scraped_products: List[ScrapedProduc
                 existing_prod.has_aminogram = sp.has_aminogram
                 existing_prod.leucine_per_100g = sp.leucine_per_100g
                 existing_prod.protein_score = sp.protein_score
+                existing_prod.whey_type = sp.whey_type
+                existing_prod.is_grass_fed = sp.is_grass_fed
+                existing_prod.origin_country = sp.origin_country
+                existing_prod.extraction_process = sp.extraction_process
+                existing_prod.chemical_free = sp.chemical_free
+                existing_prod.certifications = sp.certifications
+                existing_prod.has_coa = sp.has_coa
+                existing_prod.third_party_testing = sp.third_party_testing
+                existing_prod.manufacturing_score = sp.manufacturing_score
+                existing_prod.sweeteners = sp.sweeteners
+                existing_prod.additives_count = sp.additives_count
+                existing_prod.is_clean_label = sp.is_clean_label
+                existing_prod.health_score = sp.health_score
+                existing_prod.packaging_type = sp.packaging_type
+                existing_prod.has_plastic_scoop = sp.has_plastic_scoop
+                existing_prod.supply_chain_transparency = sp.supply_chain_transparency
+                existing_prod.eco_score = sp.eco_score
                 existing_prod.updated_at = datetime.utcnow()
                 prod_obj = existing_prod
             else:
@@ -164,6 +217,23 @@ def save_scraped_products(session: Session, scraped_products: List[ScrapedProduc
                     has_aminogram=sp.has_aminogram,
                     leucine_per_100g=sp.leucine_per_100g,
                     protein_score=sp.protein_score,
+                    whey_type=sp.whey_type,
+                    is_grass_fed=sp.is_grass_fed,
+                    origin_country=sp.origin_country,
+                    extraction_process=sp.extraction_process,
+                    chemical_free=sp.chemical_free,
+                    certifications=sp.certifications,
+                    has_coa=sp.has_coa,
+                    third_party_testing=sp.third_party_testing,
+                    manufacturing_score=sp.manufacturing_score,
+                    sweeteners=sp.sweeteners,
+                    additives_count=sp.additives_count,
+                    is_clean_label=sp.is_clean_label,
+                    health_score=sp.health_score,
+                    packaging_type=sp.packaging_type,
+                    has_plastic_scoop=sp.has_plastic_scoop,
+                    supply_chain_transparency=sp.supply_chain_transparency,
+                    eco_score=sp.eco_score,
                 )
                 session.add(prod_obj)
                 session.flush()  # Generate prod_obj.id

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ExternalLink, Layers, ArrowUpDown, CheckCircle2, PackageCheck, Flame, Award, Zap } from 'lucide-react';
+import { ExternalLink, Layers, ArrowUpDown, CheckCircle2, PackageCheck, Flame, Award, Zap, ShieldCheck, Factory } from 'lucide-react';
 import { Product } from '../lib/supabase';
 import { VariantModal } from './VariantModal';
 
@@ -10,7 +10,7 @@ interface ProductTableProps {
   isLoading: boolean;
 }
 
-type SortField = 'price_per_kg' | 'protein_score';
+type SortField = 'price_per_kg' | 'protein_score' | 'manufacturing_score' | 'health_score' | 'eco_score';
 
 export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -22,6 +22,18 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
     if (sortField === 'protein_score') {
       const scoreA = a.protein_score ?? 0;
       const scoreB = b.protein_score ?? 0;
+      return sortAscending ? scoreA - scoreB : scoreB - scoreA;
+    } else if (sortField === 'manufacturing_score') {
+      const scoreA = a.manufacturing_score ?? 0;
+      const scoreB = b.manufacturing_score ?? 0;
+      return sortAscending ? scoreA - scoreB : scoreB - scoreA;
+    } else if (sortField === 'health_score') {
+      const scoreA = a.health_score ?? 0;
+      const scoreB = b.health_score ?? 0;
+      return sortAscending ? scoreA - scoreB : scoreB - scoreA;
+    } else if (sortField === 'eco_score') {
+      const scoreA = a.eco_score ?? 0;
+      const scoreB = b.eco_score ?? 0;
       return sortAscending ? scoreA - scoreB : scoreB - scoreA;
     } else {
       const valA = a.min_price_per_kg ?? 9999;
@@ -35,7 +47,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
       setSortAscending(!sortAscending);
     } else {
       setSortField(field);
-      setSortAscending(field === 'price_per_kg' ? true : false); // Default desc for protein score, asc for price
+      setSortAscending(field === 'price_per_kg' ? true : false); // Default desc for scores, asc for price
     }
   };
 
@@ -43,20 +55,22 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
     <>
       <div className="w-full glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
         {/* Table Controls Header */}
-        <div className="p-4 sm:p-6 border-b border-gray-800/80 bg-[#121927] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 border-b border-gray-800/80 bg-[#121927] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <PackageCheck className="w-5 h-5 text-emerald-400" />
             <h2 className="text-base font-bold text-white">
-              Tableau Comparatif & Score Protéique (Whey ≤ 4 kg)
+              Tableau Comparatif (Whey & Protéines ≤ 4 kg)
             </h2>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-gray-400 mr-1">Trier par :</span>
+
             <button
               onClick={() => toggleSort('price_per_kg')}
               className={`flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
                 sortField === 'price_per_kg'
-                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-500/20'
                   : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
               }`}
             >
@@ -68,12 +82,48 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
               onClick={() => toggleSort('protein_score')}
               className={`flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
                 sortField === 'protein_score'
-                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/50 shadow-sm shadow-amber-500/20'
                   : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
               }`}
             >
               <Award className="w-3.5 h-3.5 text-amber-400" />
               <span>Score Protéique {sortField === 'protein_score' ? (sortAscending ? '(Croissant)' : '(Décroissant)') : ''}</span>
+            </button>
+
+            <button
+              onClick={() => toggleSort('manufacturing_score')}
+              className={`flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                sortField === 'manufacturing_score'
+                  ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/50 shadow-sm shadow-indigo-500/20'
+                  : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Score Fabrication {sortField === 'manufacturing_score' ? (sortAscending ? '(Croissant)' : '(Décroissant)') : ''}</span>
+            </button>
+
+            <button
+              onClick={() => toggleSort('health_score')}
+              className={`flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                sortField === 'health_score'
+                  ? 'bg-lime-950/80 text-lime-300 border-lime-500/50 shadow-sm shadow-lime-500/20'
+                  : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-lime-400" />
+              <span>Score Santé {sortField === 'health_score' ? (sortAscending ? '(Croissant)' : '(Décroissant)') : ''}</span>
+            </button>
+
+            <button
+              onClick={() => toggleSort('eco_score')}
+              className={`flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                sortField === 'eco_score'
+                  ? 'bg-teal-950/80 text-teal-300 border-teal-500/50 shadow-sm shadow-teal-500/20'
+                  : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
+              }`}
+            >
+              <Factory className="w-3.5 h-3.5 text-teal-400" />
+              <span>Éco-Score {sortField === 'eco_score' ? (sortAscending ? '(Croissant)' : '(Décroissant)') : ''}</span>
             </button>
           </div>
         </div>
@@ -83,13 +133,14 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-800 bg-[#0F1623] text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                <th scope="col" className="py-4 px-6">Produit & Marque</th>
-                <th scope="col" className="py-4 px-6 text-center">Score Protéique</th>
-                <th scope="col" className="py-4 px-6 text-center">Taux Protéines</th>
-                <th scope="col" className="py-4 px-6 text-right">Prix Min</th>
-                <th scope="col" className="py-4 px-6 text-right">Meilleur Prix / kg</th>
-                <th scope="col" className="py-4 px-6 text-center">Variantes</th>
-                <th scope="col" className="py-4 px-6 text-right">Action</th>
+                <th scope="col" className="py-4 px-5">Produit & Marque</th>
+                <th scope="col" className="py-4 px-3 text-center">Score Protéique</th>
+                <th scope="col" className="py-4 px-3 text-center">Score Fabrication</th>
+                <th scope="col" className="py-4 px-3 text-center">Score Santé</th>
+                <th scope="col" className="py-4 px-3 text-center">Éco-Score</th>
+                <th scope="col" className="py-4 px-4 text-right">Prix Min</th>
+                <th scope="col" className="py-4 px-4 text-right">Prix / kg</th>
+                <th scope="col" className="py-4 px-4 text-center">Variantes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/60 bg-[#111827]/60 text-sm">
@@ -107,11 +158,11 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                       </div>
                     </td>
                     <td className="py-4 px-6 text-center"><div className="w-16 h-6 bg-gray-800 rounded mx-auto"></div></td>
+                    <td className="py-4 px-6 text-center"><div className="w-16 h-6 bg-gray-800 rounded mx-auto"></div></td>
                     <td className="py-4 px-6 text-center"><div className="w-14 h-5 bg-gray-800 rounded mx-auto"></div></td>
                     <td className="py-4 px-6 text-right"><div className="w-16 h-5 bg-gray-800 rounded ml-auto"></div></td>
                     <td className="py-4 px-6 text-right"><div className="w-20 h-6 bg-gray-800 rounded ml-auto"></div></td>
                     <td className="py-4 px-6 text-center"><div className="w-16 h-5 bg-gray-800 rounded mx-auto"></div></td>
-                    <td className="py-4 px-6 text-right"><div className="w-20 h-8 bg-gray-800 rounded ml-auto"></div></td>
                   </tr>
                 ))
               ) : sortedProducts.length === 0 ? (
@@ -137,29 +188,67 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                   // Availability check
                   const allOut = variants.length > 0 && variants.every((v) => v.available === false);
 
-                  // Score styling
-                  const score = product.protein_score ?? 8.0;
-                  let scoreBadgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-                  if (score >= 9.0) {
-                    scoreBadgeClass = 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-400/50 glow-emerald';
-                  } else if (score >= 8.0) {
-                    scoreBadgeClass = 'bg-teal-950/60 text-teal-300 border-teal-800/60';
-                  } else if (score >= 7.0) {
-                    scoreBadgeClass = 'bg-blue-950/60 text-blue-300 border-blue-800/60';
+                  // Protein Score styling
+                  const pScore = product.protein_score ?? 8.0;
+                  let pScoreBadgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+                  if (pScore >= 9.0) {
+                    pScoreBadgeClass = 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border-emerald-400/50 glow-emerald';
+                  } else if (pScore >= 8.0) {
+                    pScoreBadgeClass = 'bg-teal-950/60 text-teal-300 border-teal-800/60';
+                  } else if (pScore >= 7.0) {
+                    pScoreBadgeClass = 'bg-blue-950/60 text-blue-300 border-blue-800/60';
                   } else {
-                    scoreBadgeClass = 'bg-amber-950/60 text-amber-300 border-amber-800/60';
+                    pScoreBadgeClass = 'bg-amber-950/60 text-amber-300 border-amber-800/60';
+                  }
+
+                  // Manufacturing Score styling
+                  const mScore = product.manufacturing_score ?? 7.0;
+                  let mScoreBadgeClass = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
+                  if (mScore >= 8.0) {
+                    mScoreBadgeClass = 'bg-gradient-to-r from-indigo-500/20 to-blue-500/20 text-indigo-300 border-indigo-400/50';
+                  } else if (mScore >= 6.5) {
+                    mScoreBadgeClass = 'bg-blue-950/60 text-blue-300 border-blue-800/60';
+                  } else {
+                    mScoreBadgeClass = 'bg-slate-800 text-slate-300 border-slate-700';
+                  }
+
+                  // Health Score styling
+                  const hScore = product.health_score ?? 6.0;
+                  let hScoreBadgeClass = 'bg-lime-500/20 text-lime-300 border-lime-500/40';
+                  if (hScore >= 8.5) {
+                    hScoreBadgeClass = 'bg-gradient-to-r from-lime-500/20 to-emerald-500/20 text-lime-300 border-lime-400/50 shadow-sm shadow-lime-500/20';
+                  } else if (hScore >= 6.0) {
+                    hScoreBadgeClass = 'bg-lime-950/60 text-lime-300 border-lime-800/60';
+                  } else {
+                    hScoreBadgeClass = 'bg-amber-950/60 text-amber-400 border-amber-800/60';
+                  }
+
+                  // Eco Score styling
+                  const eScore = product.eco_score ?? 6.0;
+                  let eScoreBadgeClass = 'bg-teal-500/20 text-teal-300 border-teal-500/40';
+                  if (eScore >= 8.5) {
+                    eScoreBadgeClass = 'bg-gradient-to-r from-teal-500/20 to-emerald-500/20 text-teal-300 border-teal-400/50 shadow-sm shadow-teal-500/20';
+                  } else if (eScore >= 6.5) {
+                    eScoreBadgeClass = 'bg-teal-950/60 text-teal-300 border-teal-800/60';
+                  } else {
+                    eScoreBadgeClass = 'bg-slate-800 text-slate-300 border-slate-700';
                   }
 
                   return (
                     <tr 
                       key={product.id}
                       className={`hover:bg-gray-800/40 transition-colors group relative ${
-                        allOut ? 'opacity-50 grayscale' : ''
+                        allOut ? 'opacity-75' : ''
                       }`}
                     >
-                      {/* Brand & Product Title */}
-                      <td className="py-4 px-6 relative">
-                        <div className="flex items-center space-x-3">
+                      {/* Brand & Product Title - FULLY CLICKABLE LINK (even when out of stock) */}
+                      <td className="py-4 px-5 relative">
+                        <a 
+                          href={product.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center space-x-3 group/link hover:opacity-90 transition-opacity"
+                        >
                           {/* Image Thumbnail with Floating PROMO Badge */}
                           <div className="relative flex-shrink-0">
                             {hasPromo && (
@@ -174,7 +263,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                               <img 
                                 src={product.image_url} 
                                 alt={product.title} 
-                                className="w-12 h-12 object-contain rounded-lg bg-gray-900 border border-gray-800 p-1"
+                                className="w-12 h-12 object-contain rounded-lg bg-gray-900 border border-gray-800 p-1 group-hover/link:border-emerald-500/50 group-hover/link:scale-105 transition-all"
                               />
                             ) : (
                               <div className="w-12 h-12 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500 text-[10px]">
@@ -188,28 +277,73 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                               <span className="inline-block px-2 py-0.5 text-[11px] font-bold rounded bg-gray-800 text-emerald-400 border border-emerald-500/20">
                                 {product.brand}
                               </span>
+
+                              {allOut && (
+                                <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-950/80 text-red-400 border border-red-800/80">
+                                  Rupture
+                                </span>
+                              )}
+
                               {hasPromo && (
                                 <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-black uppercase rounded bg-red-600/20 text-red-400 border border-red-500/30">
                                   PROMO
                                 </span>
                               )}
                             </div>
-                            <h3 className="font-semibold text-gray-100 group-hover:text-emerald-300 transition-colors line-clamp-1">
-                              {product.title}
+
+                            <h3 className="font-semibold text-gray-100 group-hover/link:text-emerald-300 transition-colors line-clamp-1 flex items-center space-x-1">
+                              <span>{product.title}</span>
+                              <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 text-emerald-400 transition-opacity flex-shrink-0" />
                             </h3>
                           </div>
-                        </div>
+                        </a>
                       </td>
 
                       {/* Score Protéique */}
-                      <td className="py-4 px-6 text-center">
+                      <td className="py-4 px-3 text-center">
                         <button
                           onClick={() => setSelectedProduct(product)}
-                          className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-black border transition-transform hover:scale-105 ${scoreBadgeClass}`}
+                          className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-black border transition-transform hover:scale-105 ${pScoreBadgeClass}`}
                           title="Cliquez pour voir le détail de l'analyse protéique et aminogramme"
                         >
                           <Award className="w-3.5 h-3.5 text-amber-400" />
-                          <span>{score.toFixed(1)} / 10</span>
+                          <span>{pScore.toFixed(1)}</span>
+                        </button>
+                      </td>
+
+                      {/* Score de Fabrication */}
+                      <td className="py-4 px-3 text-center">
+                        <button
+                          onClick={() => setSelectedProduct(product)}
+                          className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-black border transition-transform hover:scale-105 ${mScoreBadgeClass}`}
+                          title="Cliquez pour voir l'analyse complète de fabrication et d'intégrité"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>{mScore.toFixed(1)}</span>
+                        </button>
+                      </td>
+
+                      {/* Score Santé */}
+                      <td className="py-4 px-3 text-center">
+                        <button
+                          onClick={() => setSelectedProduct(product)}
+                          className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-black border transition-transform hover:scale-105 ${hScoreBadgeClass}`}
+                          title="Cliquez pour voir la composition (édulcorants, additifs, clean label)"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-lime-400" />
+                          <span>{hScore.toFixed(1)}</span>
+                        </button>
+                      </td>
+
+                      {/* Éco-Score */}
+                      <td className="py-4 px-3 text-center">
+                        <button
+                          onClick={() => setSelectedProduct(product)}
+                          className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-black border transition-transform hover:scale-105 ${eScoreBadgeClass}`}
+                          title="Cliquez pour voir l'empreinte écologique (packaging, cuillère, origine)"
+                        >
+                          <Factory className="w-3.5 h-3.5 text-teal-400" />
+                          <span>{eScore.toFixed(1)}</span>
                         </button>
                       </td>
 
@@ -262,28 +396,6 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                           <Layers className="w-3.5 h-3.5 text-emerald-400" />
                           <span>{variantsCount} variante(s)</span>
                         </button>
-                      </td>
-
-                      {/* CTA Action */}
-                      <td className="py-4 px-6 text-right">
-                        {!allOut ? (
-                          <a
-                            href={product.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-md shadow-emerald-500/20 transition-all transform hover:scale-[1.02]"
-                          >
-                            <span>Voir l&apos;offre</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        ) : (
-                          <button
-                            disabled
-                            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-800 text-gray-500 cursor-not-allowed"
-                          >
-                            <span>Rupture</span>
-                          </button>
-                        )}
                       </td>
                     </tr>
                   );

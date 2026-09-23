@@ -15,8 +15,14 @@ from .base_scraper import BaseScraper, ScrapedProduct, ProductVariant
 
 try:
     from core.protein_scorer import extract_or_estimate_protein_metrics
+    from core.manufacturing_scorer import extract_or_estimate_manufacturing_metrics
+    from core.health_scorer import extract_or_estimate_health_metrics
+    from core.eco_scorer import extract_or_estimate_eco_metrics
 except ImportError:
     from backend.core.protein_scorer import extract_or_estimate_protein_metrics
+    from backend.core.manufacturing_scorer import extract_or_estimate_manufacturing_metrics
+    from backend.core.health_scorer import extract_or_estimate_health_metrics
+    from backend.core.eco_scorer import extract_or_estimate_eco_metrics
 
 
 class ProzisScraper(BaseScraper):
@@ -191,6 +197,24 @@ class ProzisScraper(BaseScraper):
                 brand=self.brand_name
             )
 
+            mfg_metrics = extract_or_estimate_manufacturing_metrics(
+                title=clean_title,
+                description=html,
+                brand=self.brand_name
+            )
+
+            health_metrics = extract_or_estimate_health_metrics(
+                title=clean_title,
+                description=html,
+                brand=self.brand_name
+            )
+
+            eco_metrics = extract_or_estimate_eco_metrics(
+                title=clean_title,
+                description=html,
+                brand=self.brand_name
+            )
+
             return ScrapedProduct(
                 brand=self.brand_name,
                 title=clean_title,
@@ -202,6 +226,23 @@ class ProzisScraper(BaseScraper):
                 has_aminogram=protein_metrics["has_aminogram"],
                 leucine_per_100g=protein_metrics["leucine_per_100g"],
                 protein_score=protein_metrics["protein_score"],
+                whey_type=mfg_metrics["whey_type"],
+                is_grass_fed=mfg_metrics["is_grass_fed"],
+                origin_country=mfg_metrics["origin_country"],
+                extraction_process=mfg_metrics["extraction_process"],
+                chemical_free=mfg_metrics["chemical_free"],
+                certifications=mfg_metrics["certifications"],
+                has_coa=mfg_metrics["has_coa"],
+                third_party_testing=mfg_metrics["third_party_testing"],
+                manufacturing_score=mfg_metrics["manufacturing_score"],
+                sweeteners=health_metrics["sweeteners"],
+                additives_count=health_metrics["additives_count"],
+                is_clean_label=health_metrics["is_clean_label"],
+                health_score=health_metrics["health_score"],
+                packaging_type=eco_metrics["packaging_type"],
+                has_plastic_scoop=eco_metrics["has_plastic_scoop"],
+                supply_chain_transparency=eco_metrics["supply_chain_transparency"],
+                eco_score=eco_metrics["eco_score"],
             )
         except Exception as e:
             return None

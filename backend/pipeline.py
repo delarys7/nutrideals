@@ -93,7 +93,10 @@ class NutriDealsPipeline:
                     "variant_count": 0,
                     "min_prices": [],
                     "min_pkg_prices": [],
-                    "scores": []
+                    "prot_scores": [],
+                    "mfg_scores": [],
+                    "health_scores": [],
+                    "eco_scores": []
                 }
             
             brand_stats[b]["product_count"] += 1
@@ -104,11 +107,17 @@ class NutriDealsPipeline:
             if p.min_price_per_kg and p.min_price_per_kg > 0:
                 brand_stats[b]["min_pkg_prices"].append(p.min_price_per_kg)
             if p.protein_score is not None:
-                brand_stats[b]["scores"].append(p.protein_score)
+                brand_stats[b]["prot_scores"].append(p.protein_score)
+            if p.manufacturing_score is not None:
+                brand_stats[b]["mfg_scores"].append(p.manufacturing_score)
+            if p.health_score is not None:
+                brand_stats[b]["health_scores"].append(p.health_score)
+            if p.eco_score is not None:
+                brand_stats[b]["eco_scores"].append(p.eco_score)
 
-        print("\n" + "-" * 90)
-        print(f"{'Marque':<18} | {'Produits Whey':<14} | {'Variantes':<10} | {'Prix Min':<12} | {'Prix/kg Min':<12} | {'Score Protéique Moy':<18}")
-        print("-" * 90)
+        print("\n" + "-" * 140)
+        print(f"{'Marque':<16} | {'Produits':<9} | {'Variantes':<10} | {'Prix/kg Min':<12} | {'Score Prot':<12} | {'Score Fab':<12} | {'Score Santé':<12} | {'Éco-Score':<12}")
+        print("-" * 140)
 
         total_prods = 0
         total_vars = 0
@@ -119,15 +128,17 @@ class NutriDealsPipeline:
             total_prods += p_count
             total_vars += v_count
 
-            min_p = f"{min(stats['min_prices']):.2f} €" if stats["min_prices"] else "N/A"
             min_pkg = f"{min(stats['min_pkg_prices']):.2f} €/kg" if stats["min_pkg_prices"] else "N/A"
-            avg_score = f"{sum(stats['scores'])/len(stats['scores']):.1f} / 10" if stats["scores"] else "N/A"
+            avg_prot = f"{sum(stats['prot_scores'])/len(stats['prot_scores']):.1f} / 10" if stats["prot_scores"] else "N/A"
+            avg_mfg = f"{sum(stats['mfg_scores'])/len(stats['mfg_scores']):.1f} / 10" if stats["mfg_scores"] else "N/A"
+            avg_health = f"{sum(stats['health_scores'])/len(stats['health_scores']):.1f} / 10" if stats["health_scores"] else "N/A"
+            avg_eco = f"{sum(stats['eco_scores'])/len(stats['eco_scores']):.1f} / 10" if stats["eco_scores"] else "N/A"
 
-            print(f"{brand:<18} | {p_count:<14} | {v_count:<10} | {min_p:<12} | {min_pkg:<12} | {avg_score:<18}")
+            print(f"{brand:<16} | {p_count:<9} | {v_count:<10} | {min_pkg:<12} | {avg_prot:<12} | {avg_mfg:<12} | {avg_health:<12} | {avg_eco:<12}")
 
-        print("-" * 90)
-        print(f"{'TOTAL GLOBAL WHEY':<18} | {total_prods:<14} | {total_vars:<10} | {'-':<12} | {'-':<12} | {'-':<18}")
-        print("-" * 90 + "\n")
+        print("-" * 140)
+        print(f"{'TOTAL GLOBAL WHEY':<16} | {total_prods:<9} | {total_vars:<10} | {'-':<12} | {'-':<12} | {'-':<12} | {'-':<12} | {'-':<12}")
+        print("-" * 140 + "\n")
 
 
 if __name__ == "__main__":
