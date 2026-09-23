@@ -23,11 +23,17 @@ except ImportError:
 
 SHOPIFY_BRANDS = [
     {"name": "Nutrimuscle", "url": "https://www.nutrimuscle.com", "product_url_prefix": "https://www.nutrimuscle.com/products/"},
-    {"name": "ESN", "url": "https://www.esn.com", "product_url_prefix": "https://www.esn.com/fr/products/"},
+    {"name": "ESN", "url": "https://www.esn.com", "product_url_prefix": "https://www.esn.com/products/"},
     {"name": "Inshape Nutrition", "url": "https://www.inshape-nutrition.com", "product_url_prefix": "https://www.inshape-nutrition.com/products/"},
-    {"name": "Nutrimea", "url": "https://www.nutrimea.com", "product_url_prefix": "https://www.nutrimea.com/fr/products/"},
+    {"name": "Nutrimea", "url": "https://www.nutrimea.com", "product_url_prefix": "https://www.nutrimea.com/fr-fr/products/"},
     {"name": "BioTech USA", "url": "https://shop.biotechusa.fr", "product_url_prefix": "https://shop.biotechusa.fr/products/"},
 ]
+
+# Obsolete / discontinued product handles that redirect away from active product pages
+OBSOLETE_HANDLES = {
+    "proteine-clear-whey-nutrimea-sport",
+    "whey-it"
+}
 
 
 class ShopifyScraper(BaseScraper):
@@ -59,10 +65,10 @@ class ShopifyScraper(BaseScraper):
         })
 
         while True:
-            url = f"{self.base_url}/products.json?limit=250&page={page}"
+            url = f"{self.base_url}/products.json?limit=50&page={page}"
             products = []
             
-            for attempt in range(3):
+            for attempt in range(4):
                 try:
                     response = session.get(url, timeout=15)
                     if response.status_code == 200:
@@ -70,20 +76,24 @@ class ShopifyScraper(BaseScraper):
                         products = data.get("products", [])
                         break
                     elif response.status_code == 429:
-                        time.sleep(1.5 * (attempt + 1))
+                        wait_sec = 2.0 * (attempt + 1)
+                        print(f"[{self.brand_name}] Rate limit 429 touché. Attente de {wait_sec:.1f}s (essai {attempt+1}/4)...")
+                        time.sleep(wait_sec)
                     else:
+                        print(f"[{self.brand_name}] Code HTTP {response.status_code} sur {url}")
                         break
                 except Exception as e:
-                    time.sleep(1)
+                    time.sleep(1.0)
 
             if not products:
                 break
 
             all_products.extend(products)
-            if len(products) < 250:
+            if len(products) < 50:
                 break
 
             page += 1
+            time.sleep(0.5)
 
         return all_products
 
@@ -99,6 +109,10 @@ class ShopifyScraper(BaseScraper):
             handle = item.get("handle", "")
             tags = [str(t) for t in item.get("tags", [])]
             body_html = item.get("body_html", "") or ""
+
+            # Filter out obsolete/discontinued product handles
+            if handle in OBSOLETE_HANDLES:
+                continue
 
             # Apply strict Whey validation & Blacklist
             if not self.is_valid_whey_product(title, description=body_html, tags=tags):

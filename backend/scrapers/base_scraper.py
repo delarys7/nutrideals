@@ -135,15 +135,19 @@ class BaseScraper(ABC):
     def is_valid_whey_product(cls, title: str, description: str = "", tags: Optional[List[str]] = None) -> bool:
         """
         Validates that a product is strictly 100% Pure Whey.
+        Blacklist check is evaluated on Title + Tags (to avoid false positives from body HTML descriptions
+        mentioning allergens like soy lecithin, recipe suggestions like cookies/pancakes, BCAA content, or shaker instructions).
+        Whitelist check is evaluated on Title + Description + Tags.
         """
-        combined = f"{title} {description} {' '.join(tags or [])}".lower()
+        header_text = f"{title} {' '.join(tags or [])}".lower()
+        full_text = f"{title} {description} {' '.join(tags or [])}".lower()
 
-        # 1. Reject immediately if any blacklisted term is found
-        if cls.is_blacklisted(combined):
+        # 1. Reject immediately if any blacklisted term is found in title or tags
+        if cls.is_blacklisted(header_text):
             return False
 
         # 2. Require at least one whitelist Whey keyword
-        has_whey_kw = any(re.search(r'\b' + re.escape(kw) + r'\b', combined) for kw in cls.WHEY_KEYWORDS)
+        has_whey_kw = any(re.search(r'\b' + re.escape(kw) + r'\b', full_text) for kw in cls.WHEY_KEYWORDS)
         return has_whey_kw
 
     @staticmethod
