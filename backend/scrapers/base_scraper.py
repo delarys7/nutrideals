@@ -34,6 +34,9 @@ class ProductVariant(BaseModel):
     sku: Optional[str] = None
     available: bool = True
     url: Optional[str] = None
+    sweeteners: List[str] = Field(default_factory=list)
+    additives_count: int = 0
+    health_score: Optional[float] = None
 
 
 class ScrapedProduct(BaseModel):

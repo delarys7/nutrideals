@@ -101,6 +101,9 @@ class ProductVariantDB(Base):
     sku = Column(String(100), nullable=True)
     available = Column(Boolean, default=True)
     url = Column(String, nullable=True)
+    sweeteners = Column(JSONB, default=[])
+    additives_count = Column(Integer, default=0)
+    health_score = Column(Numeric(4, 1), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -120,6 +123,9 @@ def init_db():
     # Ensure compare_at_price, protein score, manufacturing score, health score & eco score columns exist
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS compare_at_price NUMERIC(10, 2);"))
+        conn.execute(text("ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS sweeteners JSONB DEFAULT '[]'::jsonb;"))
+        conn.execute(text("ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS additives_count INTEGER DEFAULT 0;"))
+        conn.execute(text("ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS health_score NUMERIC(4, 1);"))
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS protein_percentage NUMERIC(5, 2);"))
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS has_aminogram BOOLEAN DEFAULT FALSE;"))
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS leucine_per_100g NUMERIC(5, 2);"))
@@ -255,6 +261,9 @@ def save_scraped_products(session: Session, scraped_products: List[ScrapedProduc
                     var_obj.sku = v.sku
                     var_obj.available = v.available
                     var_obj.url = v.url
+                    var_obj.sweeteners = v.sweeteners
+                    var_obj.additives_count = v.additives_count
+                    var_obj.health_score = v.health_score
                     var_obj.updated_at = datetime.utcnow()
                 else:
                     # Insert new variant
@@ -270,6 +279,9 @@ def save_scraped_products(session: Session, scraped_products: List[ScrapedProduc
                         sku=v.sku,
                         available=v.available,
                         url=v.url,
+                        sweeteners=v.sweeteners,
+                        additives_count=v.additives_count,
+                        health_score=v.health_score,
                     )
                     session.add(var_obj)
                     saved_variants_count += 1

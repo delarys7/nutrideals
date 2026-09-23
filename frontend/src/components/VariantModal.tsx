@@ -300,6 +300,10 @@ export const VariantModal: React.FC<VariantModalProps> = ({ product, onClose }) 
                 const isPromo = v.compare_at_price && v.compare_at_price > v.price;
                 const isAvailable = v.available !== false;
 
+                const vHealthScore = v.health_score ?? hScore;
+                const vSweeteners = v.sweeteners && v.sweeteners.length > 0 ? v.sweeteners : sweeteners;
+                const vAdditives = v.additives_count ?? additivesCount;
+
                 return (
                   <div 
                     key={v.id || v.title} 
@@ -309,10 +313,25 @@ export const VariantModal: React.FC<VariantModalProps> = ({ product, onClose }) 
                   >
                     {/* Variant info */}
                     <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Tag className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                         <span className="text-sm font-medium text-gray-200">
                           {v.flavor || v.title}
+                        </span>
+
+                        {/* Variant Health Score Badge */}
+                        <span 
+                          className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg text-[10px] font-black border ${
+                            vHealthScore >= 9.0 
+                              ? 'bg-lime-950/90 text-lime-300 border-lime-500/50'
+                              : vHealthScore >= 6.0
+                              ? 'bg-lime-950/60 text-lime-300 border-lime-800/60'
+                              : 'bg-amber-950/60 text-amber-400 border-amber-800/60'
+                          }`}
+                          title={`Score Santé de la variante: ${vHealthScore.toFixed(1)}/10 (${vSweeteners.length > 0 ? vSweeteners.join(', ') : 'Nature'}, ${vAdditives} additif(s))`}
+                        >
+                          <Zap className="w-2.5 h-2.5 text-lime-400" />
+                          <span>Santé {vHealthScore.toFixed(1)}/10</span>
                         </span>
 
                         {/* Promo Badge */}

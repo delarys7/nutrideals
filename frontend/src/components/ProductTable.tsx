@@ -138,8 +138,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                 <th scope="col" className="py-4 px-3 text-center">Score Fabrication</th>
                 <th scope="col" className="py-4 px-3 text-center">Score Santé</th>
                 <th scope="col" className="py-4 px-3 text-center">Éco-Score</th>
-                <th scope="col" className="py-4 px-4 text-right">Prix Min</th>
-                <th scope="col" className="py-4 px-4 text-right">Prix / kg</th>
+                <th scope="col" className="py-4 px-4 text-right">MIN PRIX / KG</th>
                 <th scope="col" className="py-4 px-4 text-center">Variantes</th>
               </tr>
             </thead>
@@ -160,7 +159,6 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                     <td className="py-4 px-6 text-center"><div className="w-16 h-6 bg-gray-800 rounded mx-auto"></div></td>
                     <td className="py-4 px-6 text-center"><div className="w-16 h-6 bg-gray-800 rounded mx-auto"></div></td>
                     <td className="py-4 px-6 text-center"><div className="w-14 h-5 bg-gray-800 rounded mx-auto"></div></td>
-                    <td className="py-4 px-6 text-right"><div className="w-16 h-5 bg-gray-800 rounded ml-auto"></div></td>
                     <td className="py-4 px-6 text-right"><div className="w-20 h-6 bg-gray-800 rounded ml-auto"></div></td>
                     <td className="py-4 px-6 text-center"><div className="w-16 h-5 bg-gray-800 rounded mx-auto"></div></td>
                   </tr>
@@ -185,7 +183,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                   );
                   const hasPromo = Boolean(promoVariant);
 
-                  // Availability check
+                  // Availability check (out of stock in all variants)
                   const allOut = variants.length > 0 && variants.every((v) => v.available === false);
 
                   // Protein Score styling
@@ -238,7 +236,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                     <tr 
                       key={product.id}
                       className={`hover:bg-gray-800/40 transition-colors group relative ${
-                        allOut ? 'opacity-75' : ''
+                        allOut ? 'opacity-50 grayscale-[30%] bg-gray-950/40' : ''
                       }`}
                     >
                       {/* Brand & Product Title - FULLY CLICKABLE LINK (even when out of stock) */}
@@ -277,18 +275,6 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                               <span className="inline-block px-2 py-0.5 text-[11px] font-bold rounded bg-gray-800 text-emerald-400 border border-emerald-500/20">
                                 {product.brand}
                               </span>
-
-                              {allOut && (
-                                <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-950/80 text-red-400 border border-red-800/80">
-                                  Rupture
-                                </span>
-                              )}
-
-                              {hasPromo && (
-                                <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-black uppercase rounded bg-red-600/20 text-red-400 border border-red-500/30">
-                                  PROMO
-                                </span>
-                              )}
                             </div>
 
                             <h3 className="font-semibold text-gray-100 group-hover/link:text-emerald-300 transition-colors line-clamp-1 flex items-center space-x-1">
@@ -345,28 +331,6 @@ export const ProductTable: React.FC<ProductTableProps> = ({ products, isLoading 
                           <Factory className="w-3.5 h-3.5 text-teal-400" />
                           <span>{eScore.toFixed(1)}</span>
                         </button>
-                      </td>
-
-                      {/* Taux Protéines % */}
-                      <td className="py-4 px-6 text-center">
-                        <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-lg bg-gray-800/80 border border-gray-700 text-xs font-bold text-gray-200">
-                          <Zap className="w-3 h-3 text-emerald-400" />
-                          <span>{product.protein_percentage ? `${product.protein_percentage.toFixed(0)}%` : '78%'}</span>
-                        </div>
-                      </td>
-
-                      {/* Min Price */}
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex flex-col items-end justify-center">
-                          {promoVariant && promoVariant.compare_at_price && (
-                            <span className="text-xs text-gray-400 line-through font-medium">
-                              {promoVariant.compare_at_price.toFixed(2)} €
-                            </span>
-                          )}
-                          <span className={`font-bold text-sm ${hasPromo ? 'text-red-400' : 'text-gray-200'}`}>
-                            {product.min_price.toFixed(2)} €
-                          </span>
-                        </div>
                       </td>
 
                       {/* Best Price per KG */}

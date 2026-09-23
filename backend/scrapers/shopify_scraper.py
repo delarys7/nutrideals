@@ -12,12 +12,12 @@ from .base_scraper import BaseScraper, ScrapedProduct, ProductVariant
 try:
     from core.protein_scorer import extract_or_estimate_protein_metrics
     from core.manufacturing_scorer import extract_or_estimate_manufacturing_metrics
-    from core.health_scorer import extract_or_estimate_health_metrics
+    from core.health_scorer import extract_or_estimate_health_metrics, extract_or_estimate_variant_health_metrics
     from core.eco_scorer import extract_or_estimate_eco_metrics
 except ImportError:
     from backend.core.protein_scorer import extract_or_estimate_protein_metrics
     from backend.core.manufacturing_scorer import extract_or_estimate_manufacturing_metrics
-    from backend.core.health_scorer import extract_or_estimate_health_metrics
+    from backend.core.health_scorer import extract_or_estimate_health_metrics, extract_or_estimate_variant_health_metrics
     from backend.core.eco_scorer import extract_or_estimate_eco_metrics
 
 
@@ -113,6 +113,13 @@ class ShopifyScraper(BaseScraper):
 
             category = "whey"
 
+            # Extract parent health metrics for variant fallback
+            health_metrics = extract_or_estimate_health_metrics(
+                title=title,
+                description=body_html,
+                brand=self.brand_name
+            )
+
             raw_variants = item.get("variants", [])
             variants: List[ProductVariant] = []
 
@@ -161,6 +168,13 @@ class ShopifyScraper(BaseScraper):
                 available = bool(var.get("available", True))
                 var_url = f"{product_url}?variant={var_id}" if var_id else product_url
 
+                # Compute variant health metrics (Nature/Unflavored gets 10.0/10)
+                v_health = extract_or_estimate_variant_health_metrics(
+                    variant_title=var_title,
+                    parent_health_metrics=health_metrics,
+                    brand=self.brand_name
+                )
+
                 variants.append(
                     ProductVariant(
                         id=var_id,
@@ -172,7 +186,10 @@ class ShopifyScraper(BaseScraper):
                         price_per_kg=price_per_kg,
                         sku=sku,
                         available=available,
-                        url=var_url
+                        url=var_url,
+                        sweeteners=v_health.get("sweeteners", []),
+                        additives_count=v_health.get("additives_count", 0),
+                        health_score=v_health.get("health_score", 6.0)
                     )
                 )
 
@@ -186,13 +203,6 @@ class ShopifyScraper(BaseScraper):
 
                 # Extract & calculate Manufacturing Score metrics
                 mfg_metrics = extract_or_estimate_manufacturing_metrics(
-                    title=title,
-                    description=body_html,
-                    brand=self.brand_name
-                )
-
-                # Extract & calculate Health Score metrics
-                health_metrics = extract_or_estimate_health_metrics(
                     title=title,
                     description=body_html,
                     brand=self.brand_name

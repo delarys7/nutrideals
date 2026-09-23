@@ -18,6 +18,9 @@ export interface ProductVariant {
   sku?: string;
   available: boolean;
   url?: string;
+  sweeteners?: string[];
+  additives_count?: number;
+  health_score?: number;
 }
 
 export interface Product {

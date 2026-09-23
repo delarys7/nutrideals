@@ -148,3 +148,42 @@ def extract_or_estimate_health_metrics(
         "is_clean_label": is_clean_label,
         "health_score": score
     }
+
+
+def extract_or_estimate_variant_health_metrics(
+    variant_title: str,
+    parent_health_metrics: Dict[str, Any],
+    brand: str = ""
+) -> Dict[str, Any]:
+    """
+    Computes variant-specific Health Score and composition metrics.
+    For example: 'Nature' / 'Unflavored' variants receive 10.0/10 with 0 additives,
+    while sweet flavored variants receive flavor-appropriate sweetener and additive scores.
+    """
+    v_clean = (variant_title or "").lower()
+
+    # Unflavored / Nature variant detection
+    if any(k in v_clean for k in ["nature", "unflavored", "sans arôme", "neutre", "brut", "flavor unflavored"]):
+        sweeteners = ["sans_edulcorant"]
+        additives_count = 0
+        is_clean_label = True
+        is_unflavored = True
+        score = calculate_health_score(
+            sweeteners=sweeteners,
+            additives_count=additives_count,
+            is_clean_label=is_clean_label,
+            is_unflavored=is_unflavored
+        )
+        return {
+            "sweeteners": sweeteners,
+            "additives_count": additives_count,
+            "health_score": score
+        }
+
+    # Default to parent product health metrics for flavored variants
+    return {
+        "sweeteners": parent_health_metrics.get("sweeteners", []),
+        "additives_count": parent_health_metrics.get("additives_count", 0),
+        "health_score": parent_health_metrics.get("health_score", 6.0)
+    }
+

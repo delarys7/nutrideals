@@ -55,6 +55,9 @@ CREATE TABLE IF NOT EXISTS product_variants (
     sku VARCHAR(100),
     available BOOLEAN DEFAULT TRUE,
     url TEXT,
+    sweeteners JSONB DEFAULT '[]'::jsonb,
+    additives_count INTEGER DEFAULT 0,
+    health_score NUMERIC(4, 1),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT uq_product_variant UNIQUE (product_id, title)
@@ -62,6 +65,9 @@ CREATE TABLE IF NOT EXISTS product_variants (
 
 -- Ensure compare_at_price, protein score, manufacturing score, health score & eco score columns exist if schema already created
 ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS compare_at_price NUMERIC(10, 2);
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS sweeteners JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS additives_count INTEGER DEFAULT 0;
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS health_score NUMERIC(4, 1);
 ALTER TABLE products ADD COLUMN IF NOT EXISTS protein_percentage NUMERIC(5, 2);
 ALTER TABLE products ADD COLUMN IF NOT EXISTS has_aminogram BOOLEAN DEFAULT FALSE;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS leucine_per_100g NUMERIC(5, 2);

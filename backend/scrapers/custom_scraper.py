@@ -16,12 +16,12 @@ from .base_scraper import BaseScraper, ScrapedProduct, ProductVariant
 try:
     from core.protein_scorer import extract_or_estimate_protein_metrics
     from core.manufacturing_scorer import extract_or_estimate_manufacturing_metrics
-    from core.health_scorer import extract_or_estimate_health_metrics
+    from core.health_scorer import extract_or_estimate_health_metrics, extract_or_estimate_variant_health_metrics
     from core.eco_scorer import extract_or_estimate_eco_metrics
 except ImportError:
     from backend.core.protein_scorer import extract_or_estimate_protein_metrics
     from backend.core.manufacturing_scorer import extract_or_estimate_manufacturing_metrics
-    from backend.core.health_scorer import extract_or_estimate_health_metrics
+    from backend.core.health_scorer import extract_or_estimate_health_metrics, extract_or_estimate_variant_health_metrics
     from backend.core.eco_scorer import extract_or_estimate_eco_metrics
 
 
@@ -181,6 +181,18 @@ class ProzisScraper(BaseScraper):
             price_per_kg = self.calculate_price_per_kg(price, weight_kg)
             category = "whey"
 
+            health_metrics = extract_or_estimate_health_metrics(
+                title=clean_title,
+                description=html,
+                brand=self.brand_name
+            )
+
+            v_health = extract_or_estimate_variant_health_metrics(
+                variant_title=clean_title,
+                parent_health_metrics=health_metrics,
+                brand=self.brand_name
+            )
+
             variant = ProductVariant(
                 title=clean_title,
                 price=price,
@@ -188,7 +200,10 @@ class ProzisScraper(BaseScraper):
                 weight_kg=weight_kg,
                 price_per_kg=price_per_kg,
                 available=available,
-                url=url
+                url=url,
+                sweeteners=v_health.get("sweeteners", []),
+                additives_count=v_health.get("additives_count", 0),
+                health_score=v_health.get("health_score", 6.0)
             )
 
             protein_metrics = extract_or_estimate_protein_metrics(
@@ -198,12 +213,6 @@ class ProzisScraper(BaseScraper):
             )
 
             mfg_metrics = extract_or_estimate_manufacturing_metrics(
-                title=clean_title,
-                description=html,
-                brand=self.brand_name
-            )
-
-            health_metrics = extract_or_estimate_health_metrics(
                 title=clean_title,
                 description=html,
                 brand=self.brand_name

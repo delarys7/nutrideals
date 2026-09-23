@@ -61,7 +61,10 @@ export async function GET() {
               'price_per_kg', v.price_per_kg::float,
               'sku', v.sku,
               'available', v.available,
-              'url', v.url
+              'url', v.url,
+              'sweeteners', v.sweeteners,
+              'additives_count', v.additives_count,
+              'health_score', v.health_score::float
             )
           ) FILTER (WHERE v.id IS NOT NULL), '[]'
         ) as product_variants
