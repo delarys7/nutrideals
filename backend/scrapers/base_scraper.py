@@ -1,6 +1,7 @@
 """
 Base Scraper Architecture for NutriDeals
-Standardized interface, Pydantic models, strict blacklist filtering, and category classification.
+Standardized interface, Pydantic models, strict 100% Pure Whey filtering rules,
+and <= 4kg reference price filtering.
 """
 
 from abc import ABC, abstractmethod
@@ -27,6 +28,7 @@ class ProductVariant(BaseModel):
     title: str
     flavor: Optional[str] = None
     price: float
+    compare_at_price: Optional[float] = None
     weight_kg: Optional[float] = None
     price_per_kg: Optional[float] = None
     sku: Optional[str] = None
@@ -43,14 +45,18 @@ class ScrapedProduct(BaseModel):
     variants: List[ProductVariant] = Field(default_factory=list)
     min_price: float = 0.0
     min_price_per_kg: Optional[float] = None
+    protein_percentage: Optional[float] = None
+    has_aminogram: bool = False
+    leucine_per_100g: Optional[float] = None
+    protein_score: Optional[float] = None
 
 
 class BaseScraper(ABC):
     """
-    Abstract Base Scraper establishing template method and strict filtering rules.
+    Abstract Base Scraper establishing template method and strict 100% Pure Whey filtering rules.
     """
 
-    # 1. Strict Blacklist for Non-Supplements, Apparel, and Solid Snacks
+    # 1. Strict Blacklist for Non-Supplements, Apparel, Snacks, Gainers, Caseins & Non-Whey
     BLACK_LIST_KEYWORDS = [
         # Apparel & Accessories
         "leggings", "legging", "shorts", "short", "t-shirt", "tshirt", "shirt",
@@ -58,24 +64,34 @@ class BaseScraper(ABC):
         "belt", "gourde", "serviette", "ceinture", "bande", "casquette", "sac",
         "bottle", "mug", "cup", "ebook", "livre", "pantalon", "boite-a-pilules",
         "chaussettes", "gants", "towel", "bag", "beanie", "socks",
-        # Solid Snacks, Food & Spreads
+        # Solid Snacks, Food, Spreads, Drinks & Meals
         "bar", "barre", "bars", "crispy", "cookie", "cookies", "snack", "snacks",
         "peanut butter", "peanut", "beurre", "spread", "tartiner", "pancake", "pancakes",
-        "wafer", "sauce", "syrup", "drip", "crunchy", "pâte", "oat", "avena", "farine",
-        "porridge", "brownie", "pudding", "cold brew", "starterkit", "box", "pack",
-        "muesli", "granola", "chips", "biscuit", "cake", "bread", "pain", "jam"
+        "wafer", "sauce", "syrup", "drip", "crunchy", "pâte", "oat", "oats", "oatmeal",
+        "avena", "avoine", "farine", "porridge", "brownie", "pudding", "cold brew",
+        "starterkit", "box", "pack", "duo", "muesli", "granola", "chips", "biscuit",
+        "cake", "bread", "pain", "jam", "butter", "nutchoc", "kaffee", "coffee",
+        "chocolat chaud", "hot chocolate", "latte", "flexpresso", "gélules", "gélule", 
+        "capsules", "capsule", "caps", "fibre", "fiber",
+        # Gainers & Mass Formula
+        "gainer", "hard gainer", "lean gainer", "musclemasse",
+        # Caséines & Non-Whey Proteins
+        "casein", "caséine", "micellar", "micellaire", "milk protein", "pure milk",
+        "egg", "musclewhegg", "oeuf", "soja", "soy", "matcha",
+        # Other Non-Whey Supplements
+        "amino", "bcaa", "creatine", "créatine", "collagène", "collagen", "peptistrong"
     ]
 
-    # 2. Whitelist Keywords specifically for Whey & Protein powders
+    # 2. Strict Whitelist Keywords for 100% Pure Whey
     WHEY_KEYWORDS = [
-        "whey", "isolate", "isolat", "hydrolysat", "hydrolyzed", "clear whey",
-        "native whey", "casein", "caséine", "protimuscle", "musclewhey",
-        "blend protein", "milk protein", "protéine d'oeuf", "proteine d'oeuf",
-        "soy protein", "protéine de soja"
+        "whey", "isolate", "isolat", "hydrolysat", "hydrolyzed", "clear whey", "native whey"
     ]
 
     # Minimum threshold weight for bulk tubs/bags (rejects 30g sachets or samples)
     MIN_WEIGHT_KG = 0.35  # 350 grams
+
+    # Maximum reference weight for main card price/kg calculation (excludes >4kg bulk wholesale formats)
+    MAX_REFERENCE_WEIGHT_KG = 4.0  # 4 kg
 
     def __init__(self, brand_name: str, base_url: str):
         self.brand_name = brand_name
@@ -98,16 +114,15 @@ class BaseScraper(ABC):
     @classmethod
     def is_valid_whey_product(cls, title: str, description: str = "", tags: Optional[List[str]] = None) -> bool:
         """
-        Validates that a product is strictly a whey/protein powder supplement
-        and not an accessory, snack, or non-whey supplement.
+        Validates that a product is strictly 100% Pure Whey.
         """
         combined = f"{title} {description} {' '.join(tags or [])}".lower()
 
-        # Reject if blacklisted term found
+        # 1. Reject immediately if any blacklisted term is found
         if cls.is_blacklisted(combined):
             return False
 
-        # Reject if missing whey keywords
+        # 2. Require at least one whitelist Whey keyword
         has_whey_kw = any(re.search(r'\b' + re.escape(kw) + r'\b', combined) for kw in cls.WHEY_KEYWORDS)
         return has_whey_kw
 
@@ -138,28 +153,7 @@ class BaseScraper(ABC):
 
     @staticmethod
     def detect_category(title: str, tags: Optional[List[str]] = None) -> str:
-        """
-        Categorizes supplement product according to NutriDeals taxonomy.
-        Currently focuses on whey variants, expandable to creatine, pre-workout, etc.
-        """
-        combined = (title + " " + " ".join(tags or [])).lower()
-        
-        if "creatine" in combined or "créatine" in combined:
-            return "creatine"
-        elif "pre-workout" in combined or "preworkout" in combined or "booster" in combined:
-            return "pre_workout"
-        elif "electrolytes" in combined or "électrolytes" in combined:
-            return "electrolytes"
-        elif "creme de riz" in combined or "crème de riz" in combined or "rice cream" in combined:
-            return "creme_de_riz"
-        elif "citrulline" in combined:
-            return "citrulline"
-        elif "glycerol" in combined or "glycérol" in combined:
-            return "glycerol"
-        elif "multivitamin" in combined or "multivitamines" in combined:
-            return "multivitamines"
-        
-        # Default active target category
+        """Categorizes supplement product. Default is 'whey'."""
         return "whey"
 
     @staticmethod
@@ -182,27 +176,34 @@ class BaseScraper(ABC):
     def scrape(self) -> List[ScrapedProduct]:
         """
         Template method executing standard scraping lifecycle.
+        Filters reference min_price and min_price_per_kg exclusively for variants <= 4.0 kg.
         """
-        print(f"[{self.brand_name}] Starting whey scraping from {self.base_url}...")
+        print(f"[{self.brand_name}] Starting 100% Pure Whey scraping from {self.base_url}...")
         raw_data = self.fetch_data()
         products = self.parse_products(raw_data)
 
-        # Post-process min prices and filter invalid variants/products
         valid_products = []
         for prod in products:
             if not prod.variants:
                 continue
 
-            # Ensure min price calculation
-            valid_prices = [v.price for v in prod.variants if v.price > 0]
-            if valid_prices:
-                prod.min_price = min(valid_prices)
-            
-            valid_pkg = [v.price_per_kg for v in prod.variants if v.price_per_kg and v.price_per_kg > 0]
-            if valid_pkg:
-                prod.min_price_per_kg = min(valid_pkg)
+            # Reference variants for main card (<= 4.0 kg)
+            ref_variants = [
+                v for v in prod.variants 
+                if v.price > 0 and (v.weight_kg is None or v.weight_kg <= self.MAX_REFERENCE_WEIGHT_KG)
+            ]
+
+            if not ref_variants:
+                # Fallback to all variants if all are > 4kg
+                ref_variants = [v for v in prod.variants if v.price > 0]
+
+            if ref_variants:
+                prod.min_price = min(v.price for v in ref_variants)
+                ref_pkg = [v.price_per_kg for v in ref_variants if v.price_per_kg and v.price_per_kg > 0]
+                if ref_pkg:
+                    prod.min_price_per_kg = min(ref_pkg)
 
             valid_products.append(prod)
 
-        print(f"[{self.brand_name}] Scraped {len(valid_products)} clean whey products with {sum(len(p.variants) for p in valid_products)} total variants.")
+        print(f"[{self.brand_name}] Scraped {len(valid_products)} 100% pure whey products with {sum(len(p.variants) for p in valid_products)} total variants.")
         return valid_products

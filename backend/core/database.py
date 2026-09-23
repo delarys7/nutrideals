@@ -14,7 +14,8 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Numeric,
-    UniqueConstraint
+    UniqueConstraint,
+    text
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
@@ -53,6 +54,10 @@ class ProductDB(Base):
     category = Column(String(50), default="whey", index=True)
     min_price = Column(Numeric(10, 2), default=0.00)
     min_price_per_kg = Column(Numeric(10, 2), nullable=True, index=True)
+    protein_percentage = Column(Numeric(5, 2), nullable=True)
+    has_aminogram = Column(Boolean, default=False)
+    leucine_per_100g = Column(Numeric(5, 2), nullable=True)
+    protein_score = Column(Numeric(4, 1), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -71,6 +76,7 @@ class ProductVariantDB(Base):
     title = Column(String(255), nullable=False)
     flavor = Column(String(100), nullable=True)
     price = Column(Numeric(10, 2), nullable=False)
+    compare_at_price = Column(Numeric(10, 2), nullable=True)
     weight_kg = Column(Numeric(10, 3), nullable=True)
     price_per_kg = Column(Numeric(10, 2), nullable=True, index=True)
     sku = Column(String(100), nullable=True)
@@ -92,22 +98,25 @@ def init_db():
     """
     print("[Database] Initializing Supabase schema tables...")
     Base.metadata.create_all(bind=engine)
+    # Ensure compare_at_price and protein score columns exist
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS compare_at_price NUMERIC(10, 2);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS protein_percentage NUMERIC(5, 2);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS has_aminogram BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS leucine_per_100g NUMERIC(5, 2);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS protein_score NUMERIC(4, 1);"))
+        conn.commit()
     print("[Database] Schema tables initialized successfully.")
 
 
 def clear_products(session: Session, category: Optional[str] = None):
     """
-    Clears products from Supabase database to remove polluted or obsolete entries.
-    If category is specified, purges only products of that category.
+    Clears products from Supabase database using TRUNCATE TABLE products CASCADE;.
     """
-    if category:
-        print(f"[Database] Purging existing '{category}' products from Supabase...")
-        session.query(ProductDB).filter(ProductDB.category == category).delete(synchronize_session=False)
-    else:
-        print("[Database] Purging all existing products from Supabase...")
-        session.query(ProductDB).delete(synchronize_session=False)
+    print("[Database] Executing TRUNCATE TABLE products CASCADE; in Supabase...")
+    session.execute(text("TRUNCATE TABLE products CASCADE;"))
     session.commit()
-    print("[Database] Database purge complete.")
+    print("[Database] Database truncate complete.")
 
 
 def save_scraped_products(session: Session, scraped_products: List[ScrapedProduct]) -> Tuple[int, int]:
@@ -135,6 +144,10 @@ def save_scraped_products(session: Session, scraped_products: List[ScrapedProduc
                 existing_prod.category = sp.category
                 existing_prod.min_price = sp.min_price
                 existing_prod.min_price_per_kg = sp.min_price_per_kg
+                existing_prod.protein_percentage = sp.protein_percentage
+                existing_prod.has_aminogram = sp.has_aminogram
+                existing_prod.leucine_per_100g = sp.leucine_per_100g
+                existing_prod.protein_score = sp.protein_score
                 existing_prod.updated_at = datetime.utcnow()
                 prod_obj = existing_prod
             else:
@@ -147,6 +160,10 @@ def save_scraped_products(session: Session, scraped_products: List[ScrapedProduc
                     category=sp.category,
                     min_price=sp.min_price,
                     min_price_per_kg=sp.min_price_per_kg,
+                    protein_percentage=sp.protein_percentage,
+                    has_aminogram=sp.has_aminogram,
+                    leucine_per_100g=sp.leucine_per_100g,
+                    protein_score=sp.protein_score,
                 )
                 session.add(prod_obj)
                 session.flush()  # Generate prod_obj.id
@@ -162,6 +179,7 @@ def save_scraped_products(session: Session, scraped_products: List[ScrapedProduc
                     var_obj.variant_external_id = v.id
                     var_obj.flavor = v.flavor
                     var_obj.price = v.price
+                    var_obj.compare_at_price = v.compare_at_price
                     var_obj.weight_kg = v.weight_kg
                     var_obj.price_per_kg = v.price_per_kg
                     var_obj.sku = v.sku
@@ -176,6 +194,7 @@ def save_scraped_products(session: Session, scraped_products: List[ScrapedProduc
                         title=v.title,
                         flavor=v.flavor,
                         price=v.price,
+                        compare_at_price=v.compare_at_price,
                         weight_kg=v.weight_kg,
                         price_per_kg=v.price_per_kg,
                         sku=v.sku,

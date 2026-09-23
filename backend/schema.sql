@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS products (
     category VARCHAR(50) DEFAULT 'whey',
     min_price NUMERIC(10, 2) DEFAULT 0.00,
     min_price_per_kg NUMERIC(10, 2),
+    protein_percentage NUMERIC(5, 2),
+    has_aminogram BOOLEAN DEFAULT FALSE,
+    leucine_per_100g NUMERIC(5, 2),
+    protein_score NUMERIC(4, 1),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -28,6 +32,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
     title VARCHAR(255) NOT NULL,
     flavor VARCHAR(100),
     price NUMERIC(10, 2) NOT NULL,
+    compare_at_price NUMERIC(10, 2),
     weight_kg NUMERIC(10, 3),
     price_per_kg NUMERIC(10, 2),
     sku VARCHAR(100),
@@ -38,15 +43,22 @@ CREATE TABLE IF NOT EXISTS product_variants (
     CONSTRAINT uq_product_variant UNIQUE (product_id, title)
 );
 
+-- Ensure compare_at_price & protein score columns exist if schema already created
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS compare_at_price NUMERIC(10, 2);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS protein_percentage NUMERIC(5, 2);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS has_aminogram BOOLEAN DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS leucine_per_100g NUMERIC(5, 2);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS protein_score NUMERIC(4, 1);
+
 -- 4. Create Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_url ON products(url);
 CREATE INDEX IF NOT EXISTS idx_products_min_price_per_kg ON products(min_price_per_kg);
+CREATE INDEX IF NOT EXISTS idx_products_protein_score ON products(protein_score);
 
 CREATE INDEX IF NOT EXISTS idx_variants_product_id ON product_variants(product_id);
 CREATE INDEX IF NOT EXISTS idx_variants_price_per_kg ON product_variants(price_per_kg);
-CREATE INDEX IF NOT EXISTS idx_variants_available ON product_variants(available);
 
 -- 5. Auto-Update Timestamp Function & Triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()

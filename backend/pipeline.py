@@ -92,7 +92,8 @@ class NutriDealsPipeline:
                     "product_count": 0,
                     "variant_count": 0,
                     "min_prices": [],
-                    "min_pkg_prices": []
+                    "min_pkg_prices": [],
+                    "scores": []
                 }
             
             brand_stats[b]["product_count"] += 1
@@ -102,10 +103,12 @@ class NutriDealsPipeline:
                 brand_stats[b]["min_prices"].append(p.min_price)
             if p.min_price_per_kg and p.min_price_per_kg > 0:
                 brand_stats[b]["min_pkg_prices"].append(p.min_price_per_kg)
+            if p.protein_score is not None:
+                brand_stats[b]["scores"].append(p.protein_score)
 
-        print("\n" + "-" * 75)
-        print(f"{'Marque':<20} | {'Produits Whey':<15} | {'Variantes':<10} | {'Prix Min':<12} | {'Prix/kg Min':<12}")
-        print("-" * 75)
+        print("\n" + "-" * 90)
+        print(f"{'Marque':<18} | {'Produits Whey':<14} | {'Variantes':<10} | {'Prix Min':<12} | {'Prix/kg Min':<12} | {'Score Protéique Moy':<18}")
+        print("-" * 90)
 
         total_prods = 0
         total_vars = 0
@@ -118,12 +121,13 @@ class NutriDealsPipeline:
 
             min_p = f"{min(stats['min_prices']):.2f} €" if stats["min_prices"] else "N/A"
             min_pkg = f"{min(stats['min_pkg_prices']):.2f} €/kg" if stats["min_pkg_prices"] else "N/A"
+            avg_score = f"{sum(stats['scores'])/len(stats['scores']):.1f} / 10" if stats["scores"] else "N/A"
 
-            print(f"{brand:<20} | {p_count:<15} | {v_count:<10} | {min_p:<12} | {min_pkg:<12}")
+            print(f"{brand:<18} | {p_count:<14} | {v_count:<10} | {min_p:<12} | {min_pkg:<12} | {avg_score:<18}")
 
-        print("-" * 75)
-        print(f"{'TOTAL GLOBAL WHEY':<20} | {total_prods:<15} | {total_vars:<10} | {'-':<12} | {'-':<12}")
-        print("-" * 75 + "\n")
+        print("-" * 90)
+        print(f"{'TOTAL GLOBAL WHEY':<18} | {total_prods:<14} | {total_vars:<10} | {'-':<12} | {'-':<12} | {'-':<18}")
+        print("-" * 90 + "\n")
 
 
 if __name__ == "__main__":

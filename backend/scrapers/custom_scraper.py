@@ -1,6 +1,7 @@
 """
 Custom Scraper Module for NutriDeals
-Prozis Scraper with strict whey filtering, blacklist checking, and memory decompression.
+Prozis Scraper with French localization (fr/fr), Schema.org stock verification,
+and in-memory sitemap decompression.
 """
 
 import gzip
@@ -12,46 +13,57 @@ from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from .base_scraper import BaseScraper, ScrapedProduct, ProductVariant
 
+try:
+    from core.protein_scorer import extract_or_estimate_protein_metrics
+except ImportError:
+    from backend.core.protein_scorer import extract_or_estimate_protein_metrics
+
 
 class ProzisScraper(BaseScraper):
     """
-    Custom Scraper for Prozis targeting Whey supplements strictly.
+    Custom Scraper for Prozis targeting Whey supplements strictly,
+    localized for Prozis France (fr/fr) with accurate Schema.org stock parsing.
     """
 
-    SITEMAP_GZ_URL = "https://www.prozis.com/be/fr/sitemap_products.gz"
+    SITEMAP_GZ_URL = "https://www.prozis.com/fr/fr/sitemap_products.gz"
+    FALLBACK_SITEMAP_GZ_URL = "https://www.prozis.com/be/fr/sitemap_products.gz"
     LOCAL_FALLBACK_PATH = os.path.join(
         os.path.dirname(__file__), "..", "..", "sitemaps", "prozis_sitemap_products"
     )
 
-    def __init__(self, max_products: int = 30):
-        super().__init__(brand_name="Prozis", base_url="https://www.prozis.com")
+    def __init__(self, max_products: int = 35):
+        super().__init__(brand_name="Prozis", base_url="https://www.prozis.com/fr/fr")
         self.max_products = max_products
 
     def fetch_data(self) -> List[str]:
         """
         Downloads .gz sitemap into memory, decompresses, and parses XML URLs.
         Applies strict Blacklist and Whey Whitelist filters.
+        Ensures all generated URLs target the French store (fr/fr).
         """
         headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             ),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7"
         }
 
         xml_bytes = None
-        try:
-            response = requests.get(self.SITEMAP_GZ_URL, headers=headers, timeout=15)
-            if response.status_code == 200:
-                xml_bytes = gzip.decompress(response.content)
-                print(f"[{self.brand_name}] Downloaded and decompressed sitemap (.gz) in memory ({len(xml_bytes)} bytes).")
-            else:
-                print(f"[{self.brand_name}] Web fetch status {response.status_code}. Using local sitemap fallback...")
-        except Exception as e:
-            print(f"[{self.brand_name}] Web download failed ({e}). Using local sitemap fallback...")
 
-        # Local fallback if in-memory download fails
+        # 1. Try French sitemap .gz URL
+        for sitemap_url in [self.SITEMAP_GZ_URL, self.FALLBACK_SITEMAP_GZ_URL]:
+            try:
+                response = requests.get(sitemap_url, headers=headers, timeout=15)
+                if response.status_code == 200:
+                    xml_bytes = gzip.decompress(response.content)
+                    print(f"[{self.brand_name}] Downloaded and decompressed sitemap (.gz) in memory ({len(xml_bytes)} bytes).")
+                    break
+            except Exception as e:
+                print(f"[{self.brand_name}] Web download failed for {sitemap_url} ({e}).")
+
+        # 2. Local fallback if in-memory download fails
         if not xml_bytes and os.path.exists(self.LOCAL_FALLBACK_PATH):
             try:
                 with open(self.LOCAL_FALLBACK_PATH, "rb") as f:
@@ -64,7 +76,7 @@ class ProzisScraper(BaseScraper):
             print(f"[{self.brand_name}] Error: No sitemap data available.")
             return []
 
-        # Parse XML
+        # Parse XML & localize URLs for Prozis France (fr/fr)
         urls = []
         try:
             root = ET.fromstring(xml_bytes)
@@ -73,9 +85,15 @@ class ProzisScraper(BaseScraper):
                 loc = u.find("sm:loc", ns)
                 if loc is not None and loc.text:
                     link = loc.text.strip()
+
+                    # Force Prozis France locale URL
+                    link_fr = link.replace("/be/fr/", "/fr/fr/").replace("/pt/pt/", "/fr/fr/").replace("/es/es/", "/fr/fr/")
+                    if not link_fr.startswith("https://www.prozis.com/fr/fr/"):
+                        link_fr = link_fr.replace("https://www.prozis.com/", "https://www.prozis.com/fr/fr/")
+
                     # Apply strict Whey validation & Blacklist on link slug
-                    if self.is_valid_whey_product(link):
-                        urls.append(link)
+                    if self.is_valid_whey_product(link_fr):
+                        urls.append(link_fr)
         except Exception as err:
             print(f"[{self.brand_name}] Error parsing XML sitemap: {err}")
 
@@ -87,7 +105,7 @@ class ProzisScraper(BaseScraper):
 
     def _fetch_product_details(self, session: requests.Session, url: str) -> Optional[ScrapedProduct]:
         """
-        Fetches single Prozis product page and extracts meta properties.
+        Fetches single Prozis product page and extracts meta properties, promos, and accurate stock status.
         """
         try:
             res = session.get(url, timeout=8)
@@ -120,6 +138,19 @@ class ProzisScraper(BaseScraper):
                 except ValueError:
                     price = 0.0
 
+            # Extract Compare At Price (Strikethrough Promo Price)
+            compare_at_price = None
+            strikethrough = re.findall(r'class="[^"]*old-price[^"]*"[^>]*>(\d+[\.,]\d{2})', html)
+            if not strikethrough:
+                strikethrough = re.findall(r'<del[^>]*>(\d+[\.,]\d{2})', html)
+            if strikethrough:
+                try:
+                    parsed_cap = float(strikethrough[0].replace(",", "."))
+                    if parsed_cap > price:
+                        compare_at_price = parsed_cap
+                except ValueError:
+                    pass
+
             image_url = img_m[0] if img_m else None
 
             # Parse Weight
@@ -132,16 +163,32 @@ class ProzisScraper(BaseScraper):
             if weight_kg and weight_kg < self.MIN_WEIGHT_KG:
                 return None
 
+            # Accurate Stock status via Schema.org microdata (InStock vs OutOfStock)
+            if "schema.org/OutOfStock" in html or "OutOfStock" in html:
+                available = False
+            elif "schema.org/InStock" in html or "InStock" in html:
+                available = True
+            else:
+                # Default to True if page loaded with HTTP 200 and no explicit out of stock indicator
+                available = True
+
             price_per_kg = self.calculate_price_per_kg(price, weight_kg)
             category = "whey"
 
             variant = ProductVariant(
                 title=clean_title,
                 price=price,
+                compare_at_price=compare_at_price,
                 weight_kg=weight_kg,
                 price_per_kg=price_per_kg,
-                available=True,
+                available=available,
                 url=url
+            )
+
+            protein_metrics = extract_or_estimate_protein_metrics(
+                title=clean_title,
+                description=html,
+                brand=self.brand_name
             )
 
             return ScrapedProduct(
@@ -150,7 +197,11 @@ class ProzisScraper(BaseScraper):
                 url=url,
                 image_url=image_url,
                 category=category,
-                variants=[variant]
+                variants=[variant],
+                protein_percentage=protein_metrics["protein_percentage"],
+                has_aminogram=protein_metrics["has_aminogram"],
+                leucine_per_100g=protein_metrics["leucine_per_100g"],
+                protein_score=protein_metrics["protein_score"],
             )
         except Exception as e:
             return None
